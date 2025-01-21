@@ -22,8 +22,8 @@
 
 /* Public variables ----------------------------------------------------------*/
 extern BTN_DIO_Handle_TypeDef husrbtn; //<! Blue on-board button ("USER")
-extern BTN_DIO_Handle_TypeDef hbtn1; 	//<! THT pushbutton #1
-extern BTN_DIO_Handle_TypeDef hbtn2; 	//<! THT pushbutton #2
+extern BTN_DIO_Handle_TypeDef EXT_BTN1;
+extern BTN_DIO_Handle_TypeDef EXT_BTN2;
 
 /* Public function prototypes ------------------------------------------------*/
 

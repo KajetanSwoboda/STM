@@ -23,7 +23,8 @@
 
 /* Public variables ----------------------------------------------------------*/
 BTN_DIO_Handle_TypeDef husrbtn = BTN_DIO_INIT_HANDLE(USER_Btn, BTN_PULL_DOWN);
-
+BTN_DIO_Handle_TypeDef EXT_BTN1 = BTN_DIO_INIT_HANDLE(EXT_BTN1, BTN_PULL_DOWN);
+BTN_DIO_Handle_TypeDef EXT_BTN2 = BTN_DIO_INIT_HANDLE(EXT_BTN2, BTN_PULL_DOWN);
 /* Private function prototypes -----------------------------------------------*/
 
 /* Public function prototypes ------------------------------------------------*/

@@ -5,7 +5,7 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
-# Konfiguracja portu szeregowego
+# Konfiguracja portu szeregoqqqqqqqwego
 hSerial = serial.Serial('COM7', 115200, timeout=1, parity=serial.PARITY_NONE)
 rpm = 1000  # Zmienna do przechowywania wartości suwaka
 

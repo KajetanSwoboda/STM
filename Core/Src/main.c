@@ -67,98 +67,106 @@ uint16_t dlug_wiad = 5;
 //_____________________________________________________________________________________________________________________________________________________________
 //____________________________________TACHOMETR________________________________________________________________________________________________________________
 //_____________________________________________________________________________________________________________________________________________________________
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-{
-	if(htim == &htim2)
-	{
-		HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, 1);
-		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
-		{
-			if (flaga==0)
-			{
-				pomiar_01 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-				flaga = 1;
-			}else{
-				pomiar_02 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-				if (pomiar_02 > pomiar_01)
-				{
-					roznica = pomiar_02-pomiar_01;
-				}
-				else if (pomiar_01 > pomiar_02)
-				{
-					roznica = (0xffffffff - pomiar_01) + pomiar_02;
-				}
-				frequency = HAL_RCC_GetPCLK1Freq()/roznica;
-				aktualne_obroty = frequency*30;
-				__HAL_TIM_SET_COUNTER(htim, 0);
-				flaga = 0;
-			}
-		}
-	}
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
+    // Sprawdzenie, czy przerwanie pochodzi od timera 2
+    if(htim == &htim2){
+        // Włączenie LED jako sygnał zdarzenia
+        HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, 1);
+        // Sprawdzenie, czy przerwanie pochodzi z kanału 1
+        if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1){
+            // Pierwsze przechwycenie
+            if (flaga == 0){
+                // Odczytanie pierwszej wartości
+                pomiar_01 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+                flaga = 1;
+            }else{
+                // Odczytanie drugiej wartości
+                pomiar_02 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+                // Obliczenie różnicy
+                if (pomiar_02 > pomiar_01){roznica = pomiar_02 - pomiar_01;}
+                // Obliczenie częstotliwości
+                frequency = HAL_RCC_GetPCLK1Freq() / roznica;
+                // Obliczenie obrotów
+                aktualne_obroty = frequency * 30;
+                // Resetowanie licznika timera
+                __HAL_TIM_SET_COUNTER(htim, 0);
+                // Resetowanie flagi
+                flaga = 0;
+            }
+        }
+    }
 }
 //_____________________________________________________________________________________________________________________________________________________________
 //___________________________STEROWANIE PID, ZMIANA TRYBOW_____________________________________________________________________________________________________
 //_____________________________________________________________________________________________________________________________________________________________
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if(htim == &htim4)
-  {
-
-//____________________________STEROWANIE PID__________________________
-   Duty = PID_GetOutput(&hpid1, zadane_obroty, aktualne_obroty);
-   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint32_t)(Duty));
-   e = zadane_obroty - aktualne_obroty;
-   e = fabs(e);
-   e_procent = (e/zadane_obroty)*100;
-//____________________________________________________________________
-//__________________________ZMIANA TRYBU I EKRANU_____________________
-   if(BTN_DIO_EdgeDetected(&EXT_BTN1) == BTN_PRESSED_EDGE){
-	   if (tryb_pracy == 1)
-		   tryb_pracy = 0;
-	   else if(tryb_pracy == 0)
-		   tryb_pracy=1;
-   }
-   if(BTN_DIO_EdgeDetected(&EXT_BTN2) == BTN_PRESSED_EDGE){
-//	   if (wyswietlany_ekran == 1)
-//		   wyswietlany_ekran = 0;
-//	   else if(wyswietlany_ekran == 0)
-//		   wyswietlany_ekran=1;
-	   wyswietlany_ekran = wyswietlany_ekran+1;
-	   if(wyswietlany_ekran==3)
-		   wyswietlany_ekran = 0;
-   }
-//____________________________________________________________________
-//__________________________REGULACJA ENKODER_________________________
-	enc_raw = __HAL_TIM_GET_COUNTER(&htim8);
-	if(enc_raw<100)
-		enc_mod=1000+enc_raw;
-	else
-		enc_mod=enc_raw * 10;
-	if(tryb_pracy==1)
-		zadane_obroty = enc_mod;
-  }
-  //____________________________________________________________________
-  //__________________________WYSYLANIE UART____________________________
-     if(htim == &htim7)
-     {
-    	 uint8_t tx_buffer[64];
-    	 int resp_len = sprintf((char*)tx_buffer, "{ \"RPM\":%d, \"RPM_REF\":%d, \"Duty\":%d }\n\r", aktualne_obroty, zadane_obroty, Duty);
-    	 HAL_UART_Transmit(&huart3, tx_buffer, resp_len, 10);
-	 }
- }
+    // Sprawdzenie, czy przerwanie pochodzi od timera 4
+    if(htim == &htim4)
+    {
+        //____________________________STEROWANIE PID__________________________
+        Duty = PID_GetOutput(&hpid1, zadane_obroty, aktualne_obroty); // Obliczanie wyjścia PID
+        __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint32_t)(Duty)); // Ustawianie wartości porównania PWM
+        e = zadane_obroty - aktualne_obroty; // Obliczanie błędu
+        e = fabs(e); // Wartość bezwzględna błędu
+        e_procent = (e/zadane_obroty)*100; // Obliczanie procentowego błędu
+        //____________________________________________________________________
+        //__________________________ZMIANA TRYBU I EKRANU_____________________
+        // Zmiana trybu pracy po naciśnięciu przycisku 1
+        if(BTN_DIO_EdgeDetected(&EXT_BTN1) == BTN_PRESSED_EDGE){
+            if (tryb_pracy == 1)
+                tryb_pracy = 0;
+            else
+                tryb_pracy = 1;
+        }
+        // Zmiana ekranu po naciśnięciu przycisku 2
+        if(BTN_DIO_EdgeDetected(&EXT_BTN2) == BTN_PRESSED_EDGE){
+            wyswietlany_ekran = wyswietlany_ekran + 1; // Zwiększenie indeksu ekranu
+            if(wyswietlany_ekran == 3) // Jeśli osiągnięto 3 ekrany, wróć do 0
+                wyswietlany_ekran = 0;
+        }
+        //____________________________________________________________________
+        //__________________________REGULACJA ENKODER_________________________
+        // Odczytanie surowego licznika enkodera
+        enc_raw = __HAL_TIM_GET_COUNTER(&htim8);
+        // Modyfikacja wartości licznika w zależności od wartości
+        if(enc_raw < 100)
+            enc_mod = 1000 + enc_raw; // Jeśli mniej niż 100, dodaj 1000
+        else
+            enc_mod = enc_raw * 10; // W przeciwnym przypadku pomnóż przez 10
+        // Ustawienie zadanych obrotów na wartość enkodera, jeśli tryb pracy jest 1
+        if(tryb_pracy == 1)
+            zadane_obroty = enc_mod;
+    }
+    //____________________________________________________________________
+    //__________________________WYSYLANIE UART____________________________
+    // Sprawdzenie, czy przerwanie pochodzi od timera 7
+    if(htim == &htim7)
+    {
+        uint8_t tx_buffer[64];
+        // Przygotowanie danych do wysłania w formacie JSON
+        int resp_len = sprintf((char*)tx_buffer, "{ \"RPM\":%d, \"RPM_REF\":%d, \"Duty\":%d }\n\r", aktualne_obroty, zadane_obroty, Duty);
+        // Wysyłanie danych przez UART
+        HAL_UART_Transmit(&huart3, tx_buffer, resp_len, 10);
+    }
+}
 //_____________________________________________________________________________________________________________________________________________________________
 //______________________________ODBIOR UART i PYTHOB TRYB______________________________________________________________________________________________________
 //_____________________________________________________________________________________________________________________________________________________________
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+    // Sprawdzenie, czy przerwanie pochodzi od UART3
     if (huart == &huart3) {
-        //terminator zeby traktorwac go jako string bez tego nie dziala :/
+        // Terminator, aby traktować buffer jako string (dodanie końca ciągu)
         buffer[5] = '\0';
-        // 4 pierwsze to obroty 5 to tryb
+        // Odczytanie pierwszych 4 cyfr jako obroty
         sscanf((char*)buffer, "%4d", &zadane_obroty);
+        // Odczytanie 5-tego znaku jako tryb
         char mode_char = buffer[4];
+        // Ustawienie trybu pracy na podstawie otrzymanego znaku
         tryb_pracy_python = (mode_char == '1') ? 1 : 0;
+        // Ponowne uruchomienie odbioru danych przez UART
         HAL_UART_Receive_IT(&huart3, buffer, 5);
+        // Przypisanie trybu pracy
         tryb_pracy = tryb_pracy_python;
     }
 }
